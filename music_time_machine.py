@@ -8,6 +8,7 @@ import dotenv
 # Constants
 SELECTOR = "li.lrv-u-flex-grow-1:first-child"
 URL = "https://www.billboard.com/charts/hot-100"
+API_URL = "https://api.spotify.com/v1"
 
 dotenv.load_dotenv("./.env")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -36,7 +37,7 @@ top_songs = [
     for tag in soup.select(SELECTOR)
 ]
 
-# Authenticating with spotify
+# Authentication
 oauth = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
                                         redirect_uri=REDIRECT_URI,
                                         scope=SCOPE)
@@ -50,5 +51,20 @@ token = oauth.fetch_token(token_url="https://accounts.spotify.com/api/token",
                           authorization_response=auth_response,
                           client_secret=CLIENT_SECRET)
 
-user_data = oauth.get("https://api.spotify.com/v1/me").json()
+# Get songs
+user = oauth.get(f"{API_URL}/me").json()
+
+song_ids = []
+for song in top_songs:
+    params = {
+        "type": "track",
+        "q": f"track:{song['Song']}, artist:{song['Artist']}"
+    }
+    response = oauth.get(f"{API_URL}/search", params=params)
+    json = response.json()
+    items = json["tracks"]["items"]
+    if items:
+        song_ids.append(items[0]["id"])
+
+
 
