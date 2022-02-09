@@ -1,9 +1,9 @@
-import requests_oauthlib
 import argparse
 import os
 import dotenv
 
 import topsongs
+import authentication
 
 # Constants
 SELECTOR = "li.lrv-u-flex-grow-1:first-child"
@@ -31,18 +31,8 @@ top_songs = topsongs.TopSongs(URL, song_selector=f"{SELECTOR} h3", artist_select
 top_songs.get_songs(date, parser="html.parser")
 
 # Authentication
-oauth = requests_oauthlib.OAuth2Session(client_id=CLIENT_ID,
-                                        redirect_uri=REDIRECT_URI,
-                                        scope=SCOPE)
-
-auth_url, state = oauth.authorization_url(url="https://accounts.spotify.com/authorize")
-
-auth_response = input(f"Please go to {auth_url} and authorize access.\n"
-                      f"Enter the full callback URL")
-
-token = oauth.fetch_token(token_url="https://accounts.spotify.com/api/token",
-                          authorization_response=auth_response,
-                          client_secret=CLIENT_SECRET)
+api = authentication.Authentication(".cache")
+api.auth_spotify(scope=SCOPE)
 
 # Get songs
 
@@ -52,24 +42,24 @@ for song in top_songs.songs:
         "type": "track",
         "q": f"track:{song['song']}, artist:{song['artist']}"
     }
-    response = oauth.get(f"{API_URL}/search", params=params)
+    response = api.get(f"{API_URL}/search", params=params)
     json = response.json()
     items = json["tracks"]["items"]
     if items:
         song_ids.append(items[0]["uri"])
 
 # Create playlist
-user = oauth.get(f"{API_URL}/me").json()
+user = api.get(f"{API_URL}/me").json()
 json = {
     "name": f"Top 100 songs of {date}",
     "public": is_public,
     "description": f"Top 100 songs of {date}"
 }
-response = oauth.post(f"{API_URL}/users/{user['id']}/playlists", json=json).json()
+response = api.post(f"{API_URL}/users/{user['id']}/playlists", json=json).json()
 playlist_id = response["id"]
 
 # Add songs to playlist
 json = {
     "uris": song_ids
 }
-response = oauth.post(f"{API_URL}/playlists/{playlist_id}/tracks", json=json)
+response = api.post(f"{API_URL}/playlists/{playlist_id}/tracks", json=json)
