@@ -66,7 +66,7 @@ for song in top_songs:
     json = response.json()
     items = json["tracks"]["items"]
     if items:
-        song_ids.append(items[0]["id"])
+        song_ids.append(items[0]["uri"])
 
 
 # Create playlist
@@ -76,6 +76,11 @@ json = {
     "public": is_public,
     "description": f"Top 100 songs of {date}"
 }
-response = oauth.post(f"{API_URL}/users/{user['id']}/playlists", json=json)
+response = oauth.post(f"{API_URL}/users/{user['id']}/playlists", json=json).json()
+playlist_id = response["id"]
 
-
+# Add songs to playlist
+json = {
+    "uris": song_ids
+}
+response = oauth.post(f"{API_URL}/playlists/{playlist_id}/tracks", json=json)
